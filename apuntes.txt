@@ -1,0 +1,556 @@
+﻿Sección 1
+Es más que nada de presentación, el repositorio de github es el siguiente
+https://github.com/bradtraversy/devconnector
+Hemos instalado unos cuantos plugins al editor de código y realizamos algunos configuraciones en el también.
+
+////////////////////////////////////////////////////////////////////
+Seccion 2
+Clase #6 
+*Instalando dependencias y configuración basica del servidor*
+
+Comando * npm init * para correr cualquier nueva aplicacion de NodeJs. 
+Posterior a lanzar el anterior comando, la terminal va hacernos algunas preguntas, recordar cambiar el entry point a server.js
+Mediante npm i express mongoose passport passport-jwt jsonwebtoken body-parser validator instalamos la mayoria de las dependencias que vamos a utilizar.
+Para dependencias de desarrollador or devDependecies, como nodemon el comandon npm i -D nodemon
+    ¿Qué son dev Dependencies?
+    La diferencia entre estos dos, es que las devDependencies son módulos que solo se requieren durante el desarrollo, mientras que las dependencias son módulos que también se requieren en tiempo de ejecución. Para guardar una dependencia como devDependency en la instalación necesitamos hacer una instalación npm --save-dev, en lugar de solo una instalación npm --save.
+
+    ¿Qué es nodemon?
+    Nodemon es una utilidad que monitoreará cualquier cambio en su fuente y reiniciará automáticamente su servidor. Perfecto para el desarrollo. Instálalo usando npm. Simplemente use nodemon en lugar de nodo para ejecutar su código, y ahora su proceso se reiniciará automáticamente cuando su código cambie.
+
+Ahora se contruye el archivo server.js con el sig código
+
+const express = require("express");
+const app = express();
+app.get("/", (req, res) => res.send("Hello"));
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
+
+...seguidamente podemos levantar el servidor con el comando ** 
+node server o directamente utilizar nodemon que actualiza los cambios que hacemos en nuestros propios archivos sin necesidad de cortar la ejecución (es como un hot reload) y esto puede hacerse con el comando nodemon + el nombre del archivo o agregando un npm <script>
+
+en nuestro package.json colocamos...
+
+    "scripts": {
+        "start": "node server.js",
+        "server": "nodemon server.js"
+    }
+luego lanzamos los comandos 
+node start => para actualizar los modulos, cortamos, y lanzamos nuestro servidor con 
+npm run server 
+
+Seccion 2 Clase #7 
+*Conectando con la base de datos mongo db*
+
+Para efectos de manejar distintas claves de acceso a distintos servicios creamos una carpeta de configuración con un archivo keys.js dentro y colocamos una exportación de modulo... 
+
+module.exports = {
+  mongoURI: "mongodb://vari:vari1vari@ds135233.mlab.com:35233/devstack"
+};
+
+...posteriormente desde server.js creamos la coneción a la base de datos con las siguientes líneas
+
+const mongoose = require("mongoose");
+const db = require("./config/keys").mongoURI;
+mongoose
+  .connect(db)
+  .then(() => console.log("mongoDB conectado"))
+  .catch(err => console.log(err));
+
+Seccion 2 Clase #8 
+*Archivo de rutas con Express Router*
+
+Creamos el folder routes y dentro el folder api donde creamos el archivo users.js, profile.js, post.js y regresamos a server.js a crear urls que apunten hacia esos archivos.
+
+//Primero importamos los archivos
+const user = require("./routes/api/users");
+const profile = require("./routes/api/profile");
+const posts = require("./routes/api/posts");
+
+//Declaramos el uso de las rutas a nuestros archivos
+app.use("/api/users", users);
+app.use("/api/profile", profile);
+app.use("/api/posts", posts);
+
+Ahora trabajamos en nuestros archivos apuntados en donde para hacer uso de router debemos iniciar requiriendo express, para aplicarle el router. 
+//archivo users.js
+const express = require("express");
+const router = express.Router();
+
+//realizamos la aplicación de nuestra vista y exportamos
+router.get("/test", (req, res) => res.json({ msg: "Users works" }));
+module.exports = router;
+
+seguidamente en e browser podemos solicitar nuestras rutas para comprobar su buen funcionamiento 
+http://localhost:5000/api/users/test
+http://localhost:5000/api/posts/test
+http://localhost:5000/api/profile/test
+
+en caso de error estaría saliendo por la consola
+
+/////////////////////////////////////////////////////
+
+SECCION 3 User Api Routes & JWT Authentication
+
+= Clase #9 Creating the User Model =
+
+Cada ruta debe contar con un mongoose modelo y su esquema
+Se crea la carpeta para models y se levanta el User.js file que como convención para los modelos se nombran en singular y con mayúscula la 1er letra
+
+const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
+
+//Creando el esquema
+const UserSchema = new Schema({
+  name: {
+    type: String,
+    require: true
+  },
+  email: {
+    type: String,
+    require: true
+  },
+  password: {
+    type: String,
+    require: true
+  },
+  avatar: {
+    type: String,
+    require: true
+  },
+  date: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = User = mongoose.model("users", UserSchema);
+
+= Clase #10 Registro de usuario y Postman =
+
+~ Postman es una herramienta para la creación de APIS, postman está escrito en electron que es una tecnología para escribir aplicaciones de escritorio con javascript
+
+~ vamos a users.js para iniciar con la lógica de registro
+    //creamos la ruta POST de la API
+    router.post("/register", (req, res) => {
+
+    //verificamos la esistencia del correo para lo que Se debe cargar nuestro modelo const User = require("../../models/User"); y además llamar la dependencia bodypaser en server.js const bodyParser = require("body-parser"); en donde tenemos que colocar dos piezas del middle ware
+
+    User.findOne({ email: req.body.email })
+    //realizamos una promise cuando es encontrado un user
+    .then(user => {
+        if (user) {
+        return res.status(400).json({ email: "El correo ya existe" });
+        } else {...
+        
+
+Adicionalmente debemos validar la existencia de ese email
+En server.js
+
+    //BodyParser middleware
+    app.use(bodyParser.urlencoded({ extended: false }));
+    app.use(bodyParser.json());
+
+con lo que logramos poder hacer este tipo de selecciones req.body.email que se utilizan en esta sección.
+
+//En caso de no encontrarse mail repetido se procede con el sign iniciar
+    
+    const newUser = new User({
+        name: req.body.name,
+        email: req.body.email,
+        avatar, //aca se hace uso de shorthand de propiedades x ser iguales
+        password: req.body.password
+    });
+
+en esta sección también instalamos con npm i gravatar y usamos, la librería se encuentra en https://github.com/emerleite/node-gravatar 
+    
+    const gravatar = require("gravatar");
+    const avatar = gravatar.url(req.body.email, {
+            s: "200", //Size
+            r: "pg", //Rating
+            d: "mm" //Default
+        });
+
+También aprendemos la forma de enciptar la contraseña donde importamos una nueva libreria en users.js con:
+
+const bcrypt = require("bcryptjs");
+//Aplicamos encriptación según la librería 
+bcrypt.genSalt(10, (err, salt) => {
+    bcrypt.hash(newUser.password, salt, (err, hash) => {
+        if (err) throw err;
+        newUser.password = hash; //esto es de mongoose
+        newUser
+        .save()
+        .then(user => res.json(user))
+        .catch(err => console.log(err));
+    });
+});
+
+Al final probamos como funciona la llamada post a la API usando postman, a donde debemos configurar la nueva ruta a consultar http://localhost:5000/api/users/register y decidir como enviar, en este caso se usa el envio a traves de formulario y solo debemos llenar los campos y enviar los datos.
+
+classe # 11 Email and passport login
+
+antes de permitir el acceso a una persona debemos verificar si efectivamente existen el mail y el password coinciden, así que iniciamos creando una nueva ruta 
+
+    //@route    GET api/users/login
+    //@desc     Login User / Returning JWT token
+    //@access   Public
+    router.post("/login", (req, res) => {});
+
+seguidamente requiremos las variables que nos llegan desde nuestro formulario de login
+
+    const email = req.body.email;
+    const password = req.body.password;
+
+Se valida la existencia del email
+    
+    User.findOne({ email }).then(user => {
+    //Chech for user
+    if (!user) {
+      return res.status(404).json({ email: "Correo no encontrado" });
+    }
+
+Se valida la existencia del password 
+
+    bcrypt.compare(password, user.password).then(isMatch => {
+      if (isMatch) {
+        res.json({ msg: "Success" });
+      } ...
+
+Clase #12 Jason Web Token
+~Primeramente importamos 
+    const jwt = require("jsonwebtoken");
+
+al métod jwt.sign() pueden pasarcele varios parametros un payload,  una key de encriptacion, y una fecha de expiración
+
+así creamos el payload
+const payload = { id: user.id, name: user.name, avatar: user.avatar };
+
+    //UserToken
+        jwt.sign(
+          payload,
+          keys.secretOrKey,
+          { expiresIn: 3600 },
+          (err, token) => {
+            res.json({
+              success: true,
+              token: "Bearer " + token
+            });
+          }
+        );
+
+Clase #13 Passport JWT Authentication Strategy
+
+Para complementar la lección anterior y que realmente suceda un inicio de sesión debemos implementar con passport, porque hasta acá tenemos nuestra lógica de inicio de sesión, tenemos una coincidencia exitosa, un token y ese token incluye la carga de información del cliente pero eso no va llevar a cabo el inicio de sesión. Se usa passport!!!
+
+de modo que hacemos un archivo passport.js dentro de la carpeta config 
+en server.js lo importamos
+
+    const passport = require("passport");
+
+·Passport tiene muchos modulos para autenticación, jwt es uno de ellos y es gigantesco pero el modulo principal es passport.
+
+Acá se sigue una estrategia para autenticación Strategy es un método
+
+const JwtStrategy = require("passport-jwt").Strategy;
+const ExtractJwt = require("passport-jwt").ExtractJwt;
+const mongoose = require("mongoose");
+const User = mongoose.model("users");
+const keys = require("../config/keys");
+
+const opts = {}; //objeto vacío haciendo referencia a options
+
+opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
+opts.secretOrKey = keys.secretOrKey;
+
+module.exports = passport => {
+  passport.use(
+    new JwtStrategy(opts, (jwt_payload, done) => {
+      User.findById(jwt_payload.id).then(user => {
+        if (user) {
+          return done(null, user);
+        }
+        return done(null, false);
+      });
+    })
+  );
+};
+
+También a la vez vamos a api/users.js a crear una nueva llamada a la api que llamaremos current 
+
+    //@route    GET api/users/current
+    //@desc     Return current user
+    //@access   Public
+    router.get(
+    "/current",
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+        res.json({ 
+            id: req.user.id,
+            name: req.user.name,
+            email: req.user.email
+         });
+    }
+    );
+
+Clase #14 Handlers-1
+
+En esta sección vemos la validación que se puede realizar con la librería validator, que permite validar strings y tiene metodos como isNumber, isCreditCard, isEmpty. Así que creamos una carpeta completamente nueva, llamamos validator y creamos los archivos register.js, login.js y isEmpty.js.
+
+En register.js
+const Validator = require("validator"); //importamos
+
+module.exports = function validateRegisterInput(data) {
+  let errors = {}; //creamos un modulo que vamos a exportar y dentro iniciamos                          creando un objeto vacío donde se van a almacenar nuestros errores,                   que llegado el momento deberemos mostrarlos al cliente.
+
+Seguidamente se implementa una primera validación que no permita nombres inferiores a 2 y superiores a los 30 caracteres.
+
+  if (!Validator.isLength(data.name, { min: 2, max: 30 })) {
+    errors.name = "El nombre no debe sobrepasar de 30 caracteres";
+  }
+y como pueden existir más de un error se deben almacenar cuando existan. En el siguiente código se aplica short hand de propiedades en errors,. Validator funciona solamente con string y errors es un objeto, por lo que ocupamos un proceso aparte acá se origina el archivo isEmpty.js
+
+  return {
+    errors,
+    isValid: isEmpty(errors)
+  };
+
+En isEmpty.js ... realizamos un ejercicio de refactorización, el siguiente código es el mismo según distintas especificaciones de js y realiza la verificación que no sea un valor indefinido, nulo, que no sea objeto vacio o string vacío
+
+  ==========================
+  función normal js3
+  ==========================
+  function isEmpty(value) {
+    return(      
+      value === undefined ||
+        value === null ||
+        (typeof value === "object" && Object.keys(value).length === 0) ||
+        (typeof value === "string" && value.trim().length === 0)
+    );
+  }
+  module.exports = isEmpty;
+
+  ==========================
+  refactorización extrema ES6
+  ==========================
+  const isEmpty = value => {
+    return(
+      value === undefined ||
+      value === null ||
+      (typeof value === "object" && Object.keys(value).length === 0) ||
+      (typeof value === "string" && value.trim().length === 0)
+    );
+  };
+  module.exports = isEmpty;
+  
+  ==========================
+  refactorización extrema ES7
+  ==========================
+  En esta versión se elimina el return y sus parentesis redondos, y los parentesis rizados. Y la última condición, o línea, cierre con un semicolon ;  
+  
+  const isEmpty = value =>
+    value === undefined ||
+    value === null ||
+    (typeof value === "object" && Object.keys(value).length === 0) ||
+    (typeof value === "string" && value.trim().length === 0);
+
+    module.exports = isEmpty;
+
+Luego para poder utilizarlo desde register.js obviamente deberá requerirse 
+
+  const isEmpty = require("./is-empty");
+
+Y en api/users.js agregamos estas líneas 
+
+  //Load Input Validation
+  const validateRegisterInput = require("../../validation/register");
+
+Para que podamos verificar si hay errores antes de que suceda la acción del registro
+  
+  //accedemos a los valores del objeto erros con esta línea
+  const { errors, isValid } = validateRegisterInput(req.body); 
+  
+  //implementamos más reglas de validación
+  
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
+Clase #14 Handlers-2
+Basicamente si queremos impedir que algún campo quede vacío 
+
+en register.js ... 
+
+  if(Validator.isEmpty(data.name)){
+    error.name = "El campo nombre es requerido";
+  }
+
+en el capítulo anterior solamente se aplico la anterior validación... acá se incluyen las demás...
+
+    const Validator = require("validator");
+    const isEmpty = require("./is-empty");
+
+    module.exports = function validateRegisterInput(data) {
+      let errors = {};
+
+      //ternario asigna data.name si no está vacio y así con las demás valores
+      data.name = !isEmpty(data.name) ? data.name : "";
+      data.email = !isEmpty(data.email) ? data.email : "";
+      data.password = !isEmpty(data.password) ? data.password : "";
+      data.password2 = !isEmpty(data.password2) ? data.password2 : ""; //password de confirmacion
+
+      if (!Validator.isLength(data.name, { min: 2, max: 30 })) {
+        errors.name = "El nombre debe estar entre 2 y 30 caracteres";
+      }
+
+      if (Validator.isEmpty(data.name)) {
+        errors.name = "El campo nombre es requerido";
+      }
+
+      if (Validator.isEmpty(data.email)) {
+        errors.email = "El campo email es requerido";
+      }
+
+      if (!Validator.isEmail(data.email)) {
+        errors.email = "Correo invalido";
+      }
+
+      if (Validator.isEmpty(data.password)) {
+        errors.password = "El campo password es requerido";
+      }
+
+      if (!Validator.isLength(data.password, { min: 5, max: 30 })) {
+        errors.password =
+          "La contraseña debe superar 5 caracteres y tiene un tope de 30";
+      }
+
+      if (!Validator.equals(data.password, data.password2)) {
+        errors.password2 = "Las contraseñas deben coincidir";
+      }
+
+      return {
+        errors,
+        isValid: isEmpty(errors)
+      };
+    };
+
+Esto mismo lo duplicamos para el archivo login.js pero solo contemplamos dos campos, el email y el password, además de que debemos cambiar el nombre de la función por
+
+    module.exports = function validateLoginInput(data)
+    
+    data.email = !isEmpty(data.email) ? data.email : "";
+    data.password = !isEmpty(data.password) ? data.password : "";
+
+de modo que se eliminan las validaciones que tienen que ver con esos campos y queda así
+
+    if (Validator.isEmpty(data.email)) {
+      errors.email = "El campo email es requerido";
+    }
+
+    if (!Validator.isEmail(data.email)) {
+      errors.email = "Correo invalido";
+    }
+
+    if (Validator.isEmpty(data.password)) {
+      errors.password = "El campo password es requerido";
+    }
+
+en el archivo users.js debemos requerir nuestra función y aplicarla dentro de la lógica de lognn anterior a la acción final
+
+    const validateLoginInput = require("../../validators/login");
+
+    const { errors, isValid } = validateLoginInput(req.body);
+
+    if (!isValid) {
+      return res.status(400).json(errors);
+    }
+
+////////////////////////////////////////////////////////////////////
+
+SECCION 4 · PROFILE API ROUTES
+
+Clase #16 Aborda como se verá la sección en el front-end para ubicarse en cuanto a lo que ocurre en el back-end que es la api que desarrollamos en esta parte inicial del curso. 
+
+Clase # 17 Creando el modelo para la ruta perfil 
+·Entonces vamos al folder de modelos y creamos el archivo Profile.js, al que podemos copiarle lo que tenemos en model/user.js y modificarle el nombre del objeto a 
+ProfileSchema y crear los campos que necesitemos para esta sección para iniciar a trabajar.
+
+Acá necesitamos asociar el user al profile...
+
+    type: Schema.Types.ObjectId,
+
+y referenciar la colección 
+    ref: "users"
+
+En este episodió se toman desiciones sobre la arquitectura y funciones que va tener la app, en el área del perfil. Se hacen a 
+
+Recordar exportar como: 
+
+    module.exports = Profile = mongoose.model("profile", ProfileSchema);
+
+Clase #20 
+
+Tomará los datos o vamos a inicializar un objeto de error y luego, todo lo que se va a requerir, queremos asegurarnos de que lo agregamos aquí porque, de nuevo, el validator, solo que está vacío, solo lleva strigns.
+
+Entonces, si no envían algo en un formulario a nuestro servidor, digamos que el identificador requerido no va a aparecer como una cadena vacía. Va a venir como no o indefinido. Entonces, lo que esto está haciendo es asegurarse de que si es nulo o no definido, se enviará a una cadena vacía y luego podemos verificarlo con el validador si está vacío.
+
+
+SECCION 6 Getting started with react & the front-end
+
+= Clase #30 Implementing REACT = Correr en un solo comando el back y el front =
+
+npm i -g create-react-app
+
+Hasta acá hemos construido nuestro server, y ahora ocupamos crear el lado cliente
+comando de consola => create-react-app client
+Para no estar manejando dos consolas para lanzar el back y el front-end usamos 
+concurrently  => npm i concurrently
+
+Agregamos un pequeño script en pacjage json del servidor
+cd client && npm install
+Para poder lanzar ambos servidores por el mismo puerto script en packagejson
+"dev": "concurrently \"npm run server\" \"npm run client\""
+Levantamos en adelante ambos servidores con npm run dev 
+
+= Clase #31 Bootstrap & Assets Setup =
+Dentro de client/src/index.html la importación de bootstrap y fontawesome las hacemos en este curso mediante CDN pero también se pueden instalar a nuestro proyecto mediante el controlador de paquetes de preferencia. 
+Existe el plugin... 
+ES7 React/Redux/React-Native/JS snippets
+Con el cual podemos escribir abreviaciones para escribir nuestros componentes más rápidamente, una especie de emmet.
+El short cut... 
+rfc nos generara un componente funcional (hace cosas)
+rcc nos genera un componente de clase (de aspecto)
+
+
+= Clase #32 Configuración de react router = 
+Para instalar router => npm i react-router-dom 
+Recordar no cometer el error de instalarlo en el servidor, se puede cortar el server y lanzar nuestro comando o abrir otra terminal. También podemos utilizar el comando de... yarn add react-router-dom (verificar comando)
+Realizamos la importación de la librería bajo un alias 
+
+import { BrowserRouter as Router, Route } from "react-router-dom";
+
+Ahora, el enrutador del navegador básicamente imitará solo un servidor estándar podrá golpear la parte posterior Botón para ir a la ruta en la que estábamos en cosas así. Usa los botones de avance y retroceso del navegador.
+
+= Clase #33 React Router (v4) Setup =
+En App.js la etiqueta <Router> envuelve todo el contenido
+
+Acá en esta parte se me había ido colocar exact en el Router tag de landing recordar tener cuidado con esto
+<Route exact path="/" component={Landing} />
+...Creamos un div con la className de container que envuelva nuestras rutas
+ 
+  <div className="container">
+    <Route exact path="/register" component={Register} />
+    <Route exact path="/login" component={Login} />
+  </div>
+
+Las etiquetas html se cambiaran por el componente de react-router-dom <Link> y su atributo href se cambia por to. Así...
+
+  <Link className="nav-link" to="/register">
+    Sign Up
+  </Link>
+
+  = Clase #34 Creando el formulario de registro con estado = 
+  
+  onChange(e) {
+    this.setState({ [e.target.name]: e.target.value });
+  }  
