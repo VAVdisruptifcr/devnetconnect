@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 //DB config
 const db = require("./config/keys").mongoURI;
 
-//Conectando a nuestra mondo db
+//Conectando a nuestra mongo db
 mongoose
   .connect(db)
   .then(() => console.log("mongoDB conectado"))
