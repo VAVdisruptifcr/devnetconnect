@@ -104,7 +104,7 @@ router.post(
         .then(post => {
           //Cheakeando si ya se dió like
           if (
-            post.likes.filter((like = like.user.toString() === req.user.id))
+            post.likes.filter(like => like.user.toString() === req.user.id)
               .length > 0
           ) {
             return res
@@ -134,7 +134,7 @@ router.post(
         .then(post => {
           //Cheakeando si ya se dió like
           if (
-            post.likes.filter((like = like.user.toString() === req.user.id))
+            post.likes.filter(like => like.user.toString() === req.user.id)
               .length === 0
           ) {
             return res
